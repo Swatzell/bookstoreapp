@@ -4,6 +4,7 @@ var jwt = require("jsonwebtoken");
 var db = require("../db");
 var router = express.Router();
 
+const SECRET_KEY = "MY_SECRET_KEY";
 router.post("/register", function (req, res) {
     var { name, email, password } = req.body;
     var hashedPassword = bcrypt.hashSync(password, 8);
