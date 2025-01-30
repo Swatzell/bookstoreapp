@@ -1,5 +1,6 @@
 document.addEventListener("DOMContentLoaded", function () {
     var booksContainer = document.getElementById("books");
+    var cart = [];
 
     function fetchBooks() {
         fetch("http://localhost:3000/books")
@@ -20,8 +21,35 @@ document.addEventListener("DOMContentLoaded", function () {
             });
     }
 
-    window.addToCart = function (bookId, price) {
-        alert("Book " + bookId + " added to cart!");
+    window.addToCart = function (bookId, title, price) {
+     var item = cart.find(item => item.bookId === bookId);
+     if (item) {
+         item.quantity++;
+     } else {
+         cart.push({ bookId: bookId, title: title, price: price, quantity: 1 });
+     }
+     updateCartDisplay();
+    };
+
+    function updateCartDisplay() {
+        var cartContainer = document.getElementById("cart");
+        cartContainer.innerHTML = "<h2>Cart</h2>";
+        cart.forEach(function (item, index) {
+            var itemDiv = document.createElement("div");
+            cartContainer.innerHTML = `
+                <p>${item.title} - $${item.price} x ${item.quantity}
+                <button onclick="removeFromCart(${index})">Remove</button></p>
+            `;
+            cartContainer.appendChild(itemDiv);
+        });
+    }
+
+    window.removeFromCart = function (index) {
+        cart[index].quantity--;
+        if (cart[index].quantity === 0) {
+            cart.splice(index, 1);
+        }
+        updateCartDisplay();
     };
 
     fetchBooks();
