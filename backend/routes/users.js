@@ -10,18 +10,19 @@ router.post("/register", function (req, res) {
     var hashedPassword = bcrypt.hashSync(password, 8);
 
     db.run("INSERT INTO users (name, email, password) VALUES (?, ?, ?)", [name, email, hashedPassword], function (err) {
-        if (err) return res.status(500).send(err.message);
+        if (err) return res.status(500).send("User registration failed.");
         res.json({ message: "User registered!" });
     });
 });
 
 router.post("/login", function (req, res) {
     var { email, password } = req.body;
+
     db.get("SELECT * FROM users WHERE email = ?", [email], function (err, user) {
         if (!user || !bcrypt.compareSync(password, user.password)) {
             return res.status(401).send("Invalid credentials");
         }
-        var token = jwt.sign({ id: user.id }, "SECRET_KEY", { expiresIn: "1h" });
+        var token = jwt.sign({ id: user.id, name: user.name }, SECRET_KEY, { expiresIn: "1h" });
         res.json({ token });
     });
 });
