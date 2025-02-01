@@ -13,16 +13,26 @@ document.addEventListener("DOMContentLoaded", function () {
                         <p>Author: ${book.author}</p>
                         <p>Genre: ${book.genre}</p>
                         <p>Price: $${book.price}</p>
-                        <button onclick="addToCart(${book.id}, ${book.price})">Add to Cart</button>
+                        <button onclick="viewReviews(${book.id})">View Reviews</button>
+                        <div id="reviews-${book.id}" class="reviews"></div>
                     `;
                     booksContainer.appendChild(bookDiv);
                 });
             });
     }
-
-    window.addToCart = function (bookId, price) {
-        alert("Book " + bookId + " added to cart!");
+   
+    window.viewReviews = function (bookId) {
+        fetch("http://localhost:3000/books/reviews/" + bookId)
+            .then(response => response.json())
+            .then(reviews => {
+                var reviewDiv = document.getElementById("reviews-" + bookId);
+                reviewDiv.innerHTML = "<h4>Reviews:</h4>";
+                reviews.forEach(function (review) {
+                    reviewDiv.innerHTML += `<p>⭐ ${review.rating}/5 - ${review.review_text}</p>`;
+                });
+            });
     };
+
 
     fetchBooks();
 });
