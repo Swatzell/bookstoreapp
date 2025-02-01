@@ -15,4 +15,15 @@ router.get("/user/:userId", function (req, res) {
     });
 });
 
+router.post("/add", function (req, res) {
+    var { book_id, user_id, rating, review_text } = req.body;
+    db.run("INSERT INTO reviews (book_id, user_id, rating, review_text, created_at) VALUES (?, ?, ?, ?, datetime('now'))",
+        [book_id, user_id, rating, review_text],
+        function (err) {
+            if (err) return res.status(500).send(err.message);
+            res.json({ message: "Review added!" });
+        }
+    );
+});
+
 module.exports = router;
