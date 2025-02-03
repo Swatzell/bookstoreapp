@@ -7,8 +7,22 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <h1>Welcome</h1>
+    <h1>Welcome to Your Dashboard</h1>
     <button onclick="logout()">Logout</button>
+
+    <h2>Your Orders</h2>
+    <div id="orders"></div>
+
+    <h2>Your Reviews</h2>
+    <div id="user-reviews"></div>
+
+    <h2>Write a Review</h2>
+    <label for="book-list">Choose a book:</label>
+    <select id="book-list"></select>
+    <input type="number" id="rating" min="1" max="5" placeholder="Rating (1-5)">
+    <textarea id="review-text" placeholder="Write your review"></textarea>
+    <button onclick="submitReview()">Submit Review</button>
+
     <script src="dashboard.js"></script>
 </body>
 </html>
