@@ -1,3 +1,4 @@
+
 document.addEventListener("DOMContentLoaded", function () {
     var token = localStorage.getItem("token");
     if (!token) {
@@ -8,6 +9,8 @@ document.addEventListener("DOMContentLoaded", function () {
     var ordersContainer = document.getElementById("orders");
     var reviewsContainer = document.getElementById("user-reviews");
     var bookListDropdown = document.getElementById("book-list");
+    var submitReviewButton = document.getElementById("submit-review-btn");
+    var logoutButton = document.getElementById("logout-btn");
 
     function getUserId() {
         var payload = JSON.parse(atob(token.split(".")[1]));
@@ -54,14 +57,17 @@ document.addEventListener("DOMContentLoaded", function () {
             });
     }
 
-    window.submitReview = function () {
+    submitReviewButton.addEventListener("click", function () {
         var book_id = bookListDropdown.value;
         var rating = document.getElementById("rating").value;
         var review_text = document.getElementById("review-text").value;
 
         fetch("http://localhost:3000/reviews/add", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + token
+            },
             body: JSON.stringify({
                 book_id,
                 user_id: getUserId(),
@@ -72,15 +78,15 @@ document.addEventListener("DOMContentLoaded", function () {
         .then(response => response.json())
         .then(() => {
             alert("Review submitted!");
-            fetchUserReviews();
+            fetchUserReviews(); 
         })
         .catch(() => alert("Failed to submit review"));
-    };
+    });
 
-    function logout() {
+    logoutButton.addEventListener("click", function () {
         localStorage.removeItem("token");
         window.location.href = "index.html";
-    }
+    });
 
     fetchUserOrders();
     fetchUserReviews();

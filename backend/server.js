@@ -8,7 +8,8 @@ app.use(bodyParser.json());
 
 
 app.use("/books", require("./routes/books"));
-
+app.use("/users", require("./routes/users"));
+app.use("/reviews", require("./routes/reviews"));
 var path = require("path");
 app.use(express.static(path.join(__dirname, "../frontend")));
 

@@ -4,24 +4,21 @@ var jwt = require("jsonwebtoken");
 var db = require("../db");
 var router = express.Router();
 
-const SECRET_KEY = "MY_SECRET_KEY";
-router.post("/register", function (req, res) {
-    var { name, email, password } = req.body;
-    var hashedPassword = bcrypt.hashSync(password, 8);
-
-    db.run("INSERT INTO users (name, email, password) VALUES (?, ?, ?)", [name, email, hashedPassword], function (err) {
-        if (err) return res.status(500).send("User registration failed.");
-        res.json({ message: "User registered!" });
-    });
-});
+const SECRET_KEY = "MY_SECRET_KEY"; 
 
 router.post("/login", function (req, res) {
     var { email, password } = req.body;
 
     db.get("SELECT * FROM users WHERE email = ?", [email], function (err, user) {
-        if (!user || !bcrypt.compareSync(password, user.password)) {
-            return res.status(401).send("Invalid credentials");
+        if (!user) {
+            return res.status(401).send("Invalid email or password.");
         }
+
+        var passwordIsValid = bcrypt.compareSync(password, user.password);
+        if (!passwordIsValid) {
+            return res.status(401).send("Invalid email or password.");
+        }
+
         var token = jwt.sign({ id: user.id, name: user.name }, SECRET_KEY, { expiresIn: "1h" });
         res.json({ token });
     });
