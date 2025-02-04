@@ -22,5 +22,16 @@ router.post("/add", function (req, res) {
         }
     );
 });
-
+router.get("/user/:userId", function (req, res) {
+    db.all(`
+        SELECT reviews.id, reviews.book_id, books.title AS book_title, reviews.rating, reviews.review_text, reviews.created_at
+        FROM reviews
+        JOIN books ON reviews.book_id = books.id
+        WHERE reviews.user_id = ?
+        ORDER BY reviews.created_at DESC
+    `, [req.params.userId], function (err, rows) {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows);
+    });
+});
 module.exports = router;

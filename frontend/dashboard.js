@@ -1,111 +1,213 @@
-
 document.addEventListener("DOMContentLoaded", function () {
-    var token = localStorage.getItem("token");
-    if (!token) {
-        window.location.href = "login.html";
-        return;
-    }
+  var closeBtn = document.getElementById("modal-cancel-review");
+  if (closeBtn) {
+    closeBtn.addEventListener("click", closeReviewModal);
+  }
+  var token = localStorage.getItem("token");
+  if (!token) {
+    window.location.href = "login.html";
+    return;
+  }
 
-    var ordersContainer = document.getElementById("orders");
-    var reviewsContainer = document.getElementById("user-reviews");
-    var bookListDropdown = document.getElementById("book-list");
-    var submitReviewButton = document.getElementById("submit-review-btn");
-    var logoutButton = document.getElementById("logout-btn");
+  var booksContainer = document.getElementById("books-container");
+  var ordersContainer = document.getElementById("orders");
+  var reviewsContainer = document.getElementById("user-reviews");
+  var logoutButton = document.getElementById("logout-btn");
 
-    function getUserId() {
-        var payload = JSON.parse(atob(token.split(".")[1]));
-        return payload.id;
-    }
+  function getUserId() {
+    var payload = JSON.parse(atob(token.split(".")[1]));
+    return payload.id;
+  }
 
-    function fetchUserOrders() {
-        fetch("http://localhost:3000/orders/" + getUserId(), {
-            headers: { "Authorization": "Bearer " + token }
-        })
-        .then(response => response.json())
-        .then(orders => {
-            ordersContainer.innerHTML = "<h3>Your Orders</h3>";
-            orders.forEach(order => {
-                ordersContainer.innerHTML += `<p>Order #${order.id} - ${order.total_price}$ (${order.status})</p>`;
-            });
+  function fetchBooks() {
+    fetch("/books")
+      .then((response) => response.json())
+      .then((books) => {
+        booksContainer.innerHTML = "";
+        books.forEach((book) => {
+          var bookDiv = document.createElement("div");
+          bookDiv.className = "book";
+          bookDiv.innerHTML = `
+                        <h3>${book.title}</h3>
+                        <p><strong>Author:</strong> ${book.author}</p>
+                        <p><strong>Genre:</strong> ${book.genre}</p>
+                        <p><strong>Price:</strong> $${book.price}</p>
+                        <p><strong>Stock:</strong> <span class="stock-count">${book.stock_quantity}</span></p>
+                        <button class="order-button" data-book-id="${book.id}" data-price="${book.price}">Order Now</button>
+                        <button class="review-button" data-book-id="${book.id}" data-book-title="${book.title}">Write Review</button>
+                    `;
+          booksContainer.appendChild(bookDiv);
         });
-    }
 
-    function fetchUserReviews() {
-        fetch("http://localhost:3000/reviews/user/" + getUserId(), {
-            headers: { "Authorization": "Bearer " + token }
-        })
-        .then(response => response.json())
-        .then(reviews => {
-            reviewsContainer.innerHTML = "<h3>Your Reviews</h3>";
-            reviews.forEach(review => {
-                reviewsContainer.innerHTML += `<p>⭐ ${review.rating}/5 - ${review.review_text} (Book ID: ${review.book_id})</p>`;
-            });
+        document.querySelectorAll(".order-button").forEach((button) => {
+          button.addEventListener("click", function () {
+            var bookId = this.getAttribute("data-book-id");
+            var price = this.getAttribute("data-price");
+            placeOrder(bookId, price);
+          });
         });
-    }
 
-    function fetchBooks() {
-        fetch("http://localhost:3000/books")
-            .then(response => response.json())
-            .then(books => {
-                bookListDropdown.innerHTML = "";
-                books.forEach(book => {
-                    var option = document.createElement("option");
-                    option.value = book.id;
-                    option.textContent = book.title;
-                    bookListDropdown.appendChild(option);
-                });
-            });
-    }
+        document.querySelectorAll(".review-button").forEach((button) => {
+          button.addEventListener("click", function () {
+            var bookId = this.getAttribute("data-book-id");
+            var bookTitle = this.getAttribute("data-book-title");
+            openReviewModal(bookId, bookTitle);
+          });
+        });
+      })
+      .catch((error) => {
+        console.error("Error fetching books:", error);
+        booksContainer.innerHTML = "<p>Error loading books.</p>";
+      });
+  }
+  function placeOrder(bookId, price) {
+    var userId = getUserId();
 
-    submitReviewButton.addEventListener("click", function () {
-        var book_id = bookListDropdown.value;
-        var rating = document.getElementById("rating").value;
-        var review_text = document.getElementById("review-text").value;
-
-        if (!book_id || !rating || !review_text) {
-            alert("Please fill in all fields before submitting.");
-            return;
+    fetch("/orders/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        user_id: userId,
+        total_price: price,
+        items: [{ book_id: bookId, quantity: 1, price: price }],
+      }),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.error) {
+          alert("Error placing order: " + data.error);
+          return;
         }
+        alert("Order placed successfully!");
 
-        fetch("/reviews/add", {
-            method: "POST",
-            headers: { 
-                "Content-Type": "application/json",
-                "Authorization": "Bearer " + token
-            },
-            body: JSON.stringify({
-                book_id,
-                user_id: getUserId(),
-                rating,
-                review_text
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                alert("Error submitting review: " + data.error);
-                return;
-            }
-            alert("Review submitted!");
+        updateStockCount(bookId);
 
-            // ✅ Immediately add the new review to "My Reviews" section without refreshing
-            var newReview = document.createElement("p");
-            newReview.innerHTML = `⭐ ${rating}/5 - ${review_text} (${book_id})`;
-            reviewsContainer.appendChild(newReview);
+        fetchUserOrders();
+      })
+      .catch((error) => {
+        console.error("Error placing order:", error);
+        alert("Failed to place order.");
+      });
+  }
+  function fetchUserOrders() {
+    fetch("/orders/user/" + getUserId(), {
+      headers: { Authorization: "Bearer " + token },
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then((orders) => {
+        ordersContainer.innerHTML = "<h3>Your Orders</h3>";
+        if (orders.length === 0) {
+          ordersContainer.innerHTML += "<p>No orders yet.</p>";
+          return;
+        }
+        orders.forEach((order) => {
+          ordersContainer.innerHTML += `<p>📚 <strong>${
+            order.book_title || "Unknown Book"
+          }</strong> - Quantity: ${order.quantity} - Total: $${
+            order.total_price
+          } (${order.status})</p>`;
+        });
+      })
+      .catch((error) => console.error("Error fetching orders:", error));
+  }
+  function updateStockCount(bookId) {
+    var bookElement = document.querySelector(
+      `.order-button[data-book-id="${bookId}"]`
+    );
+    if (bookElement) {
+      var stockElement = bookElement.parentElement.querySelector(
+        "p strong.stock-count"
+      );
+      if (stockElement) {
+        let currentStock = parseInt(stockElement.innerText, 10);
+        if (currentStock > 0) {
+          stockElement.innerText = currentStock - 1;
+        }
+      }
+    }
+  }
 
-            // Clear form fields after successful submission
-            document.getElementById("rating").value = "";
-            document.getElementById("review-text").value = "";
-        })
-        .catch(() => alert("Failed to submit review"));
-    });
+  function fetchUserReviews() {
+    fetch("/reviews/user/" + getUserId(), {
+      headers: { Authorization: "Bearer " + token },
+    })
+      .then((response) => response.json())
+      .then((reviews) => {
+        reviewsContainer.innerHTML = "<h3>Your Reviews</h3>";
+        if (reviews.length === 0) {
+          reviewsContainer.innerHTML += "<p>No reviews yet.</p>";
+          return;
+        }
+        reviews.forEach((review) => {
+          reviewsContainer.innerHTML += `<p>⭐ ${review.rating}/5 - ${review.review_text} <strong>(${review.book_title})</strong></p>`;
+        });
+      })
+      .catch((error) => console.error("Error fetching reviews:", error));
+  }
 
-    logoutButton.addEventListener("click", function () {
-        localStorage.removeItem("token");
-        window.location.href = "index.html";
-    });
+  function openReviewModal(bookId, bookTitle) {
+    var modal = document.getElementById("review-modal");
+    modal.style.display = "flex";
+    document.getElementById("modal-book-title").innerText = bookTitle;
 
-    fetchUserOrders();
-    fetchUserReviews();
-    fetchBooks();
+    document.getElementById("modal-submit-review").onclick = function () {
+      submitReview(bookId);
+    };
+  }
+
+  function closeReviewModal() {
+    var modal = document.getElementById("review-modal");
+    if (modal) {
+      modal.style.display = "none";
+    }
+  }
+
+  function submitReview(bookId) {
+    var rating = document.getElementById("modal-rating").value;
+    var reviewText = document.getElementById("modal-review-text").value;
+
+    if (!rating || !reviewText) {
+      alert("Please fill in all fields before submitting.");
+      return;
+    }
+
+    fetch("/reviews/add", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer " + token,
+      },
+      body: JSON.stringify({
+        book_id: bookId,
+        user_id: getUserId(),
+        rating,
+        review_text: reviewText,
+      }),
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.error) {
+          alert("Error submitting review: " + data.error);
+          return;
+        }
+        alert("Review submitted!");
+        closeReviewModal();
+        fetchUserReviews();
+      })
+      .catch(() => alert("Failed to submit review"));
+  }
+
+  logoutButton.addEventListener("click", function () {
+    localStorage.removeItem("token");
+    window.location.href = "index.html";
+  });
+
+  fetchBooks();
+  fetchUserOrders();
+  fetchUserReviews();
 });
