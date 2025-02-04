@@ -62,7 +62,12 @@ document.addEventListener("DOMContentLoaded", function () {
         var rating = document.getElementById("rating").value;
         var review_text = document.getElementById("review-text").value;
 
-        fetch("http://localhost:3000/reviews/add", {
+        if (!book_id || !rating || !review_text) {
+            alert("Please fill in all fields before submitting.");
+            return;
+        }
+
+        fetch("/reviews/add", {
             method: "POST",
             headers: { 
                 "Content-Type": "application/json",
@@ -76,9 +81,21 @@ document.addEventListener("DOMContentLoaded", function () {
             })
         })
         .then(response => response.json())
-        .then(() => {
+        .then(data => {
+            if (data.error) {
+                alert("Error submitting review: " + data.error);
+                return;
+            }
             alert("Review submitted!");
-            fetchUserReviews(); 
+
+            // ✅ Immediately add the new review to "My Reviews" section without refreshing
+            var newReview = document.createElement("p");
+            newReview.innerHTML = `⭐ ${rating}/5 - ${review_text} (${book_id})`;
+            reviewsContainer.appendChild(newReview);
+
+            // Clear form fields after successful submission
+            document.getElementById("rating").value = "";
+            document.getElementById("review-text").value = "";
         })
         .catch(() => alert("Failed to submit review"));
     });
