@@ -1,38 +1,68 @@
 document.addEventListener("DOMContentLoaded", function () {
-    var booksContainer = document.getElementById("books");
+    var booksContainer = document.getElementById("books-container");
+    var loginButton = document.getElementById("login-btn");
+
+    
+    loginButton.addEventListener("click", function () {
+        window.location.href = "login.html";
+    });
 
     function fetchBooks() {
-        fetch("http://localhost:3000/books")
+        fetch("/books")
             .then(response => response.json())
             .then(books => {
                 booksContainer.innerHTML = "";
                 books.forEach(function (book) {
-                    var bookDiv = document.createElement("div");
-                    bookDiv.innerHTML = `
+                    var bookCard = document.createElement("div");
+                    bookCard.className = "book-card";
+                    bookCard.innerHTML = `
                         <h3>${book.title}</h3>
-                        <p>Author: ${book.author}</p>
-                        <p>Genre: ${book.genre}</p>
-                        <p>Price: $${book.price}</p>
-                        <button onclick="viewReviews(${book.id})">View Reviews</button>
-                        <div id="reviews-${book.id}" class="reviews"></div>
+                        <p><strong>Author:</strong> ${book.author}</p>
+                        <p><strong>Genre:</strong> ${book.genre}</p>
+                        <p><strong>Price:</strong> $${book.price}</p>
+                        <button class="review-btn" data-book-id="${book.id}">View Reviews</button>
+                        <div id="reviews-${book.id}" class="reviews-container"></div>
                     `;
-                    booksContainer.appendChild(bookDiv);
+                    booksContainer.appendChild(bookCard);
                 });
+
+                
+                document.querySelectorAll(".review-btn").forEach(button => {
+                    button.addEventListener("click", function () {
+                        var bookId = this.getAttribute("data-book-id");
+                        viewReviews(bookId);
+                    });
+                });
+            })
+            .catch(error => {
+                booksContainer.innerHTML = "<p>Error loading books.</p>";
+                console.error("Error fetching books:", error);
             });
     }
-   
-    window.viewReviews = function (bookId) {
-        fetch("http://localhost:3000/books/reviews/" + bookId)
+
+    function viewReviews(bookId) {
+        var reviewContainer = document.getElementById("reviews-" + bookId);
+
+        if (reviewContainer.style.display === "block") {
+            reviewContainer.style.display = "none";
+            return;
+        }
+
+        fetch(`/books/reviews/${bookId}`)
             .then(response => response.json())
             .then(reviews => {
-                var reviewDiv = document.getElementById("reviews-" + bookId);
-                reviewDiv.innerHTML = "<h4>Reviews:</h4>";
-                reviews.forEach(function (review) {
-                    reviewDiv.innerHTML += `<p>⭐ ${review.rating}/5 - ${review.review_text}</p>`;
-                });
-            });
-    };
-
+                reviewContainer.innerHTML = "<h4>Reviews:</h4>";
+                if (reviews.length === 0) {
+                    reviewContainer.innerHTML += "<p>No reviews yet.</p>";
+                } else {
+                    reviews.forEach(review => {
+                        reviewContainer.innerHTML += `<p>⭐ ${review.rating}/5 - ${review.review_text}</p>`;
+                    });
+                }
+                reviewContainer.style.display = "block";
+            })
+            .catch(error => console.error("Error fetching reviews:", error));
+    }
 
     fetchBooks();
 });
