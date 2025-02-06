@@ -6,6 +6,34 @@ var router = express.Router();
 
 const SECRET_KEY = "MY_SECRET_KEY"; 
 
+router.post("/register", function (req, res) {
+    var { name, email, password } = req.body;
+
+    if (!name || !email || !password) {
+        return res.status(400).json({ error: "All fields are required." });
+    }
+
+    db.get("SELECT * FROM users WHERE email = ?", [email], (err, user) => {
+        if (err) return res.status(500).json({ error: err.message });
+
+        if (user) {
+            return res.status(400).json({ error: "Email already exists. Please log in." });
+        }
+        bcrypt.hash(password, 10, function (err, hashedPassword) {
+            if (err) {
+                return res.status(500).json({ error: "Error hashing password." });
+            }
+
+        db.run("INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
+            [name, email, hashedPassword],
+            function (err) {
+                if (err) return res.status(500).json({ error: err.message });
+                res.json({ message: "Registration successful!" });
+            }
+        );
+    });
+});
+})
 router.post("/login", function (req, res) {
     var { email, password } = req.body;
 

@@ -5,7 +5,7 @@ document.getElementById("register-form").addEventListener("submit", function(eve
     var email = document.getElementById("email").value;
     var password = document.getElementById("password").value;
 
-    fetch("/auth/register", {
+    fetch("http://localhost:3000/users/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, password })
